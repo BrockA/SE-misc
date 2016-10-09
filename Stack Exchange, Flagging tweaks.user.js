@@ -23,7 +23,8 @@
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @version     1.0
+// @version     1.5
+// @history     1.5 Handle old-style flags.
 // @history     1.0 Initial public release.
 // ==/UserScript==
 
@@ -282,13 +283,23 @@ function styleNodeBasedOnFlagContents (jNode) {
         jNode.addClass ('gmFlagRetracted');
     }
     //--- Unresolved flags = poor SE design too
-    //else if (jNode.has (":not( :has(.flag-outcome))").length) {
     else if (jNode.has (".supernovabg").length) {
         jNode.addClass ('gmFlagPending');
     }
     else {
-        jNode.css ('background', "red");
-        reportImportantError ("Unresolved flag entry!", false, jNode);
+        /*--- Last ditch check for old-style flags.  These were not tracked the modern way.
+            The change happened approximately April 28th, 2011.?
+        */
+        var chngDate    = new Date ("2011-04-28");
+        var dateNd      = jNode.find (".relativetime");
+        var flagDate    = new Date (dateNd.attr ("title") );
+        if (flagDate < chngDate) {
+            jNode.addClass ('gmObsolete');
+        }
+        else {
+            jNode.css ('background', "red");
+            reportImportantError ("Unresolved flag entry!", false, jNode);
+        }
     }
 }
 
@@ -356,6 +367,9 @@ GM_addStyle ( `
     }
     .gmFlagRetracted, #gmFlagStatTbl td:nth-child(6), #gmFlagStatTbl th:nth-child(6) {
         background-color:       #f2e6ff;    // lavender-y
+    }
+    .gmObsolete {
+        background-color:       lightgray;
     }
     #gmFlagStatTbl tr:nth-child(3) > td {
         background:             none;
