@@ -23,7 +23,9 @@
 // @grant       GM_addStyle
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @version     1.5
+// @noframes
+// @version     1.6
+// @history     1.6 Block operation in iFrames.
 // @history     1.5 Handle old-style flags.
 // @history     1.0 Initial public release.
 // ==/UserScript==
