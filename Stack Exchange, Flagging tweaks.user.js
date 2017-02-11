@@ -24,26 +24,37 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     1.7
+// @version     1.8
+// @history     1.8 Updated to accomodate new topbar. Ref: meta.stackoverflow.com/q/343103/
 // @history     1.7 For moderators, only summerize the mod's flags.
 // @history     1.6 Block operation in iFrames.
 // @history     1.5 Handle old-style flags.
 // @history     1.0 Initial public release.
 // ==/UserScript==
 
-/*--- Checking for logged-in user, you can also use unsafeWindow.StackExchange.options.user.userId
-    Except, then have to also check that whole tree is defined or use try-catch (ugh.)
-    console.log ("U Id: ", unsafeWindow.StackExchange.options.user.userId);
-*/
 var userId;
-var loggedInUserLnk = $(".topbar-links > a.profile-me");
-if (loggedInUserLnk.length) {
-    userId          = loggedInUserLnk.attr ("href").replace (/^.+?users\/(\d+)\b.*$/, "$1");
+if (objHas (unsafeWindow, "StackExchange.options.user.userId") ) {
+    userId = unsafeWindow.StackExchange.options.user.userId;
 }
 else {
     console.log ("===> ", GM_info.script.name + ": no user detected.");
+    // Note: on double-runs caused by rapid redirects, the first pass will report no user. This is okay and only the last run counts.
 }
 
+/*  Other potential icons:
+    //-- Mops, brooms:
+    http://i.stack.imgur.com/05rE1.png      -- Transp white outline, transparent.
+    http://i.stack.imgur.com/Y9Ffx.png      -- White outline, transparent.
+    http://i.stack.imgur.com/m5n2A.png      -- White outline, black BG.
+
+    //-- Skulls:
+    http://i.stack.imgur.com/yfleb.png      -- Darker blue
+    http://i.stack.imgur.com/yTdZC.png      -- Green
+    http://i.stack.imgur.com/wU37v.png      -- Overly light green?
+    http://i.stack.imgur.com/0CLsA.png      -- Green, with light fill
+    http://i.stack.imgur.com/4ti36.png      -- Blue, with light green fill
+    http://i.stack.imgur.com/78mbl.png      -- Blue, with transparent white fill
+*/
 var flagSumIconSrc  = "http://i.stack.imgur.com/05rE1.png";
 
 /*--- There are 2 cases:
@@ -257,9 +268,18 @@ else {
 
     //--- Add quicklink for flag summary in topbar
     if (userId) {
+        //-- Old topbar style
         $(".topbar-links").prepend ( `
             <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
                 <div class="gravatar-wrapper-24">
+                    <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
+                </div>
+            </a>
+        `);
+        //-- New topbar style
+        $(".my-profile").before ( `
+            <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
+                <div class="grayBG gravatar-wrapper-24">
                     <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
                 </div>
             </a>
@@ -409,5 +429,8 @@ GM_addStyle ( `
         font-size:              1rem;
         margin:                 1.5rem 0 -1rem 0;
         color:                  gray;
+    }
+    .grayBG {
+        background:             gray;
     }
 ` );
