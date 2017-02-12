@@ -18,8 +18,9 @@
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     2.1
-// @history     2.1 No point in injecting script anymore due to Chrome and Firefox changes.
+// @version     2.2
+// @history     2.2 Update test and minor text formatting.
+// @history     2.1 No point in injecting the script anymore, due to Chrome and Firefox changes.
 // @history     2.0 Update for SE changes (jQuery version, esp.), Added <sup> and <sub> support. Moved to GitHub proper.
 // @history     1.2 SSL support
 // @history     1.1 Style tweak
@@ -46,7 +47,7 @@ function AddOurButtonsAsNeeded () {
                     if (bbList.length) {
                         clearInterval (bbListTimer);
                         var insrtPnt    = bbList.find (".wmd-button").not (".wmd-help-button").last ();
-                        var lftPos      = parseInt (insrtPnt[0].style.left.replace ("px", ""), 10);
+                        var lftPos      = parseInt (insrtPnt[0].style.left, 10);  //  replace not needed
                         insrtPnt.after ( `
                             <li class="wmd-button wmd-kbd-button" title="Keyboard tag &lt;kbd&gt; Alt+K" style="left: ${lftPos+25}px;">
                                 <!-- Use shorter text for space reasons -->
@@ -126,10 +127,7 @@ function InsertOurTag (node, tagTxt) {
     var possWrappedTxt;
     try {
         //--- Lazyman's overrun checking...
-        possWrappedTxt  = oldText.slice (
-                            iTargetStart - tagLength,
-                            iTargetEnd   + tagLength + 1
-                        );
+        possWrappedTxt  = oldText.slice (iTargetStart - tagLength,  iTargetEnd + tagLength + 1);
     }
     catch (e) {
         possWrappedTxt  = "Text can't be wrapped, cause we overran the string.";
@@ -152,18 +150,14 @@ function InsertOurTag (node, tagTxt) {
     ) {
         iTargetStart   -= tagLength;
         iTargetEnd     += tagLength + 1;
-        newText         = oldText.slice (0, iTargetStart)
-                        + selectedText + oldText.slice (iTargetEnd)
-                        ;
+        newText         = oldText.slice (0, iTargetStart) + selectedText + oldText.slice (iTargetEnd);
         iTargetEnd      = iTargetStart + selectedText.length;
     }
     else {
         /*--- Here we will wrap the selection in our tags, but there is one extra
             condition.  We don't want to wrap leading or trailing whitespace.
         */
-        var trimSelctd  = selectedText.match (/^(\s*)(\S?(?:.|\n|\r)*\S)(\s*)$/)
-                        || ["", "", "", ""]
-                        ;
+        var trimSelctd  = selectedText.match (/^(\s*)(\S?(?:.|\n|\r)*\S)(\s*)$/)  ||  ["", "", "", ""];
         if (trimSelctd.length != 4) {
             console.warn ("***Userscript error: unexpected failure of whitespace RE.");
         }
