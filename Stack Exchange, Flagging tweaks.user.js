@@ -24,7 +24,8 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     1.8
+// @version     1.9
+// @history     1.9 Flag summary post, edge case
 // @history     1.8 Updated to accomodate new topbar. Ref: meta.stackoverflow.com/q/343103/
 // @history     1.7 For moderators, only summerize the mod's flags.
 // @history     1.6 Block operation in iFrames.
@@ -88,8 +89,7 @@ else {
         </div>
         This is for a spam flag that is still pending.
 */
-if ( /\/flag-summary\b/.test (location.pathname) ) {
-
+if ( /\/users\/flag-summary\/\d+/.test (location.pathname) ) {
     $(".flagged-post").each ( function () {
         //--- Posts can have multiple flags, so may have to stripe each flag seperately
         var jThis       = $(this);
