@@ -24,13 +24,16 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     1.9
-// @history     1.9 Flag summary post, edge case
+// @version     2.0
+// @history     2.0 Avoid mixed content warning on SSL pages.  Add Tampermonkey metadata.
+// @history     1.9 Flag summary post, edge case.
 // @history     1.8 Updated to accomodate new topbar. Ref: meta.stackoverflow.com/q/343103/
 // @history     1.7 For moderators, only summerize the mod's flags.
 // @history     1.6 Block operation in iFrames.
 // @history     1.5 Handle old-style flags.
 // @history     1.0 Initial public release.
+// @author      Brock Adams
+// @homepage    http://stackapps.com/q/7057/7653
 // ==/UserScript==
 
 var userId;
@@ -56,7 +59,7 @@ else {
     http://i.stack.imgur.com/4ti36.png      -- Blue, with light green fill
     http://i.stack.imgur.com/78mbl.png      -- Blue, with transparent white fill
 */
-var flagSumIconSrc  = "http://i.stack.imgur.com/05rE1.png";
+var flagSumIconSrc  = "*://i.stack.imgur.com/05rE1.png";
 
 /*--- There are 2 cases:
     1) New style user page, plus meta site user page.
