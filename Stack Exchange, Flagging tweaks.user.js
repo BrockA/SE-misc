@@ -24,7 +24,8 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     2.0
+// @version     2.1
+// @history     2.1 Always make sure you are testing the file you think you are testing!
 // @history     2.0 Avoid mixed content warning on SSL pages.  Add Tampermonkey metadata.
 // @history     1.9 Flag summary post, edge case.
 // @history     1.8 Updated to accomodate new topbar. Ref: meta.stackoverflow.com/q/343103/
@@ -59,7 +60,7 @@ else {
     http://i.stack.imgur.com/4ti36.png      -- Blue, with light green fill
     http://i.stack.imgur.com/78mbl.png      -- Blue, with transparent white fill
 */
-var flagSumIconSrc  = "*://i.stack.imgur.com/05rE1.png";
+var flagSumIconSrc  = "//i.stack.imgur.com/05rE1.png";
 
 /*--- There are 2 cases:
     1) New style user page, plus meta site user page.
