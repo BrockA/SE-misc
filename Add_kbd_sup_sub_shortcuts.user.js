@@ -2,6 +2,7 @@
 // @name        StackExchange, Add kbd, sup, and sub shortcuts
 // @description Adds buttons and keyboard shortcuts to add <kbd>, <sup>, and <sub>, tags.
 // @match       *://*.askubuntu.com/*
+// @match       *://*.mathoverflow.net/*
 // @match       *://*.serverfault.com/*
 // @match       *://*.stackapps.com/*
 // @match       *://*.stackexchange.com/*
