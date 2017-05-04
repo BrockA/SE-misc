@@ -2,6 +2,7 @@
 // @name        StackExchange, Add kbd, sup, and sub shortcuts
 // @description Adds buttons and keyboard shortcuts to add <kbd>, <sup>, and <sub>, tags.
 // @match       *://*.askubuntu.com/*
+// @match       *://*.mathoverflow.net/*
 // @match       *://*.serverfault.com/*
 // @match       *://*.stackapps.com/*
 // @match       *://*.stackexchange.com/*
@@ -18,7 +19,8 @@
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     2.2
+// @version     2.3
+// @history     2.3 Add mathoverflow.net.
 // @history     2.2 Update test and minor text formatting.
 // @history     2.1 No point in injecting the script anymore, due to Chrome and Firefox changes.
 // @history     2.0 Update for SE changes (jQuery version, esp.), Added <sup> and <sub> support. Moved to GitHub proper.
