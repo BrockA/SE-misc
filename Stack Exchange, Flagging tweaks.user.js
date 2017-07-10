@@ -24,7 +24,8 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     2.1
+// @version     2.2
+// @history     2.2 Prevent double icon that occured in certain browsing sequences.
 // @history     2.1 Always make sure you are testing the file you think you are testing!
 // @history     2.0 Avoid mixed content warning on SSL pages.  Add Tampermonkey metadata.
 // @history     1.9 Flag summary post, edge case.
@@ -273,21 +274,25 @@ else {
     //--- Add quicklink for flag summary in topbar
     if (userId) {
         //-- Old topbar style
-        $(".topbar-links").prepend ( `
-            <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
-                <div class="gravatar-wrapper-24">
-                    <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
-                </div>
-            </a>
-        `);
+        if (document.getElementById("gmFlagSumIco") == null) {
+            $(".topbar-links").prepend ( `
+                <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
+                    <div class="gravatar-wrapper-24">
+                        <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
+                    </div>
+                </a>
+            `);
+        }
         //-- New topbar style
-        $(".my-profile").before ( `
-            <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
-                <div class="grayBG gravatar-wrapper-24">
-                    <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
-                </div>
-            </a>
-        `);
+        if (document.getElementById("gmFlagSumIco") == null) {
+            $(".my-profile").before ( `
+                <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
+                    <div class="grayBG gravatar-wrapper-24">
+                        <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
+                    </div>
+                </a>
+            `);
+        }
     }
 
     //--- Check if we are too late to flag an answer:
