@@ -6,8 +6,10 @@
 // @match           *://chat.stackexchange.com/rooms/*
 // @match           *://chat.meta.stackexchange.com/rooms/*
 // @run-at          document-body
+// @noframes
 // @grant           none
-// @version         1.0
+// @version         1.1
+// @history         1.1 Iframe or double-run problem in MS Edge!?
 // @history         1.0 Initial release
 // @author          Brock Adams
 // @homepage        https://stackapps.com/a/7828/7653
@@ -17,6 +19,10 @@ window.addEventListener ("load", function () {
     if ( ! Eggs.WOB) {
         console.log ("Loading eggs.js...");
         $.getScript ('//cdn-chat.sstatic.net/chat/Js/eggs.js');
+    }
+    if ( $("#yourPoison").length) {
+        console.error (`${top == self} Double run occured somehow?! Please report this message and your browser/OS/Tampermonkey details to the developer.`);
+        return;
     }
     $( `
         <select id="yourPoison" style="margin-left: 3em;">
@@ -49,7 +55,7 @@ function launchEEgg (zEvent) {
             Eggs.Console ('rm -r');
             break;
         case "Cthulu":
-            Eggs. Cthulu('<[^>]');
+            Eggs.Cthulu('<[^>]');
             break;
         default:
             console.error ("Unexpected Easter Egg type: ", eeType);
