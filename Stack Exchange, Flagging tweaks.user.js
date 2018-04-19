@@ -24,13 +24,14 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     2.2
-// @history     2.2 Prevent double icon that occured in certain browsing sequences.
+// @version     2.3
+// @history     2.3 Adjusted flag icon for new page layout.
+// @history     2.2 Prevent double icon that occurred in certain browsing sequences.
 // @history     2.1 Always make sure you are testing the file you think you are testing!
 // @history     2.0 Avoid mixed content warning on SSL pages.  Add Tampermonkey metadata.
 // @history     1.9 Flag summary post, edge case.
-// @history     1.8 Updated to accomodate new topbar. Ref: meta.stackoverflow.com/q/343103/
-// @history     1.7 For moderators, only summerize the mod's flags.
+// @history     1.8 Updated to accommodate new topbar. Ref: meta.stackoverflow.com/q/343103/
+// @history     1.7 For moderators, only summarize the mod's flags.
 // @history     1.6 Block operation in iFrames.
 // @history     1.5 Handle old-style flags.
 // @history     1.0 Initial public release.
@@ -84,9 +85,9 @@ else {
 
 
 /*--- On flagging summary pages, color code the flag entries.
-    Flag staus looks like, in Russian:
+    Flag status looks like, in Russian:
         <div class="cbt mod-flag">
-            <span class="bounty-indicator-tab flagbg bounty-fix">????</span> –
+            <span class="bounty-indicator-tab flagbg bounty-fix">????</span> ?
             <a href="/users/177669/brock-adams">Brock Adams</a>
             <span title="2015-11-15 09:09:14Z" class="relativetime">15 ????? ?????</span>
             &nbsp;
@@ -96,7 +97,7 @@ else {
 */
 if ( /\/users\/flag-summary\/\d+/.test (location.pathname) ) {
     $(".flagged-post").each ( function () {
-        //--- Posts can have multiple flags, so may have to stripe each flag seperately
+        //--- Posts can have multiple flags, so may have to stripe each flag separately
         var jThis       = $(this);
         var postsFlags  = jThis.find (".mod-flag");
         if (postsFlags.length === 0) {
@@ -169,7 +170,7 @@ if ( /\/users\/flag-summary\/\d+/.test (location.pathname) ) {
                 case 5:  //-- Expired
                     statsArray[fType]  += fCount;
                     /*-- "Pending" doesn't count for percent calcs.
-                        Likwise, from http://meta.stackexchange.com/a/141400/148310 :
+                        Likewise, from http://meta.stackexchange.com/a/141400/148310 :
                             "The flag weight is decreased by declined flags, but not by disputed ones. "
                         We were *encouraged*, at one point to dispute flags, too.
                     */
@@ -281,9 +282,9 @@ else {
                         <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
                     </div>
                 </a>
-            `);
+            ` );
         }
-        //-- New topbar style
+        /*-- <strike>New</strike> topbar style
         if (document.getElementById("gmFlagSumIco") == null) {
             $(".my-profile").before ( `
                 <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
@@ -291,7 +292,20 @@ else {
                         <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
                     </div>
                 </a>
-            `);
+            ` );
+        }
+        */
+        //-- New topbar style as of about April 19, 2018
+        if (document.getElementById("gmFlagSumIco") == null) {
+            $(".my-profile").parent ().before ( `
+                <li class="-item">
+                    <a class="my-profile" href="/users/flag-summary/${userId}" title="Flag Summary page">
+                        <div class="grayBG gravatar-wrapper-24">
+                            <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="${flagSumIconSrc}">
+                        </div>
+                    </a>
+                </li>
+            ` );
         }
     }
 
