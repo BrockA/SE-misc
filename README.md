@@ -8,3 +8,4 @@ But you can get many of them with [this search at Stack Apps](http://stackapps.c
  - [Add kbd, sup, and sub shortcuts](https://stackapps.com/q/3341/7653)
  - [Flagging tweaks](https://stackapps.com/q/7057/7653)
  - [Dynamically expand the Q and A inputs](https://stackapps.com/a/7719/7653)
+ - [Chat, Wheel of Blame and other Easter eggs](https://stackapps.com/a/7828/7653)
