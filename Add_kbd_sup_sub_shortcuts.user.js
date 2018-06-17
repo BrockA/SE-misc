@@ -231,7 +231,7 @@ function InsertOurTag (node, tagTxt, bTagHasNoEnd, bWrapByWord) {
             }
             else {
                 let wrappedText = tagTxt + trimSelctd[2] + endTag;
-                if (bWrapByWord) {
+                if (bWrapByWord  &&  trimSelctd[2].length) {
                     let pieces  = trimSelctd[2].split (/(\W+)/);
                     if (pieces.length) {
                         wrappedText = "";
