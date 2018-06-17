@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        StackExchange, Add kbd, sup, and sub shortcuts
-// @description Adds buttons and keyboard shortcuts to add <kbd>, <sup>, and <sub>, tags.
+// @description Adds buttons and keyboard shortcuts to add <kbd>, <sup>, <sub> tags, and more.
 // @match       *://*.askubuntu.com/*
 // @match       *://*.mathoverflow.net/*
 // @match       *://*.serverfault.com/*
@@ -19,7 +19,8 @@
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     3.0
+// @version     4.0
+// @history     4.0 Refactor à la MVC, in prep for options dialog; Fix double markup on slow page loads; Add multi-word split for <kbd>.
 // @history     3.0 SE changed positioning; Added hover highlites; Added <br>; Added <del>; Clear JSHint warnings.
 // @history     2.3 Add mathoverflow.net.
 // @history     2.2 Update test and minor text formatting.
@@ -29,82 +30,117 @@
 // @history     1.1 Style tweak
 // @history     1.0 Standardized wrap logic to same as SE markup
 // @history     1.0 Initial release on GitHubGist
+// @author      Brock Adams
+// @homepage    http://stackapps.com/q/3341/7653
+// @updateURL   https://github.com/BrockA/SE-misc/raw/master/Add_kbd_sup_sub_shortcuts.user.js
 // ==/UserScript==
+// Lint foo follows, but Tampermonkey is FUBAR at the moment:
 // jshint -W014
+/* eslint-disable no-multi-spaces */
+/* global StackExchange */
+
+var rootNode = $("#content");
+var scConfig = [
+    // titleName,   tagText,  btnText,          bSoloTag, bNotTag, keyTxt, keyCode, kbModifiers (Alt/Ctrl/Shift), kbModArry, bWrapByWord
+    // 0            1         2                 3      4      5          6   7        8   9
+    ["Keyboard",    "kbd",    "<kbd>kb</kbd>",  false, false, "K",       75, ["Alt"], [], true],
+    ["Superscript", "sup",    "<sup>sup</sup>", false, false, "&#8593;", 38, ["Alt"], [], false],  // Up arrow
+    ["Subscript",   "sub",    "<sub>sub</sub>", false, false, "&#8595;", 40, ["Alt"], [], false],  // Dwn arrow
+    ["Del/strike",  "del",    "<del>del</del>", false, false, "X",       88, ["Alt"], [], false],
+    ["Break",       "br",     "&crarr;",        true,  false, "B",       66, ["Alt"], [], false],
+    ["em-space",    "&emsp;", "&harr;",         true,  true,  "M",       77, ["Alt"], [], false],
+];
+let targetKeyCodes      = [];
+let targetCssClasses    = [];
 
 $("textarea.wmd-input").each (AddOurButtonsAsNeeded);
 
-var rootNode = $("#content");
 rootNode.on ("focus",   "textarea.wmd-input", AddOurButtonsAsNeeded);
 rootNode.on ("keydown", "textarea.wmd-input", InsertOurTagByKeypress);
 rootNode.on ("click",   ".tmAdded",  InsertOurTagByClick);
 
+/*--- Pre-build button HTML. It's like:
+        <li class="wmd-button tmAdded wmd-kbd-button" title="Keyboard tag &lt;kbd&gt; Alt+K">
+            <span><kbd>kb</kbd></span>
+        </li>
+    for each new button.
+*/
+let btnsHtml = "";
+for (let btn of scConfig) {
+    let btnClssTxt      = btn[1].replace (/\W/g, "");
+    btnClssTxt          = `wmd-${btnClssTxt}-button`;
+    let btnTtlDetail    = btn[4]  ?  btn[1]  :  `&lt;${btn[1]}&gt;`;
+    let btnKeyHint      = btn[7].join ('+') + `+${btn[5]}`;
+    targetCssClasses.push (btnClssTxt);
+    btnsHtml += `
+        <li class="wmd-button tmAdded ${btnClssTxt}" title="${btn[0]} ${btnTtlDetail} ${btnKeyHint}">
+            <span>${btn[2]}</span>
+        </li>
+    `;
+}
+
+//--- Compile keyboard modifiers and quick-check list.
+for (let btn of scConfig) {
+    let btnMods = btn[7];
+    for (let kbMod of btnMods) {
+        switch (kbMod.toLowerCase() ) {
+            case "alt":     btn[8].push ("altKey");     break;
+            case "ctrl":    btn[8].push ("ctrlKey");    break;
+            case "shift":   btn[8].push ("shiftKey");   break;
+            default:
+                console.warn (`***Userscript error: Illegal keyboard modifier: "${kbMod}"`);
+            break;
+        }
+    }
+    targetKeyCodes.push (btn[6]);
+}
+
 function AddOurButtonsAsNeeded () {
     var jThis   = $(this);
     if ( ! jThis.data ("hasKbdBttn") ) {
-        //--- Find the button bar and add our buttons after the italics btn (Since they are all text formatting).
+        //--- Find the button bar and add our buttons after the last, not help, button.
         var btnBar  = jThis.prevAll ("div.wmd-button-bar");
         if (btnBar.length) {
             //--- The button bar takes a while to AJAX-in.
-            var bbListTimer = setInterval ( function() {
-                    var bbList  = btnBar.find ("ul.wmd-button-row");
-                    if (bbList.length) {
-                        clearInterval (bbListTimer);
-                        var insrtPnt    = bbList.find (".wmd-button").not (".wmd-help-button").last ();
-                        insrtPnt.after ( `
-                            <li class="wmd-button tmAdded wmd-kbd-button" title="Keyboard tag &lt;kbd&gt; Alt+K">
-                                <!-- Use shorter text for space reasons -->
-                                <span><kbd>kb</kbd></span>
-                            </li>
-                            <li class="wmd-button tmAdded wmd-sup-button" title="Superscript &lt;sup&gt; Alt+&#8593;">
-                                <span><sup>sup</sup></span>
-                            </li>
-                            <li class="wmd-button tmAdded wmd-sub-button" title="Subscript &lt;sub&gt; Alt+&#8595;">
-                                <span><sub>sub</sub></span>
-                            </li>
-                            <li class="wmd-button tmAdded wmd-del-button" title="Del/strike &lt;del&gt; Alt+X">
-                                <span><del>del</del></span>
-                            </li>
-                            <li class="wmd-button tmAdded wmd-br-button" title="Break &lt;br&gt; Alt+B">
-                                <span>&crarr;</span>
-                            </li>
-                        ` );
-                        jThis.data ("hasKbdBttn", true);
-                    }
-                },
-                100
-            );
+            var bbListTimer = setInterval ( () => {
+                var bbList  = btnBar.find ("ul.wmd-button-row");
+                if (bbList.length) {
+                    clearInterval (bbListTimer);
+                    if (jThis.data ("hasKbdBttn") )  return;  // Guard against multiple timer overlap on slow pages.
+
+                    let insrtPnt = bbList.find (".wmd-button").not (".wmd-help-button").last ();
+                    insrtPnt.after (btnsHtml);
+                    jThis.data ("hasKbdBttn", true);
+                }
+            }, 100);
         }
     }
 }
 
 function InsertOurTagByKeypress (zEvent) {
-    //--- On Alt-K, insert the <kbd> set.
-    if (zEvent.altKey  &&  zEvent.which == 75) {
-        InsertOurTag (this, "<kbd>");
-        return false;
+    //--- At least one modifier must be set
+    if ( !zEvent.altKey  &&  !zEvent.ctrlKey  &&  !zEvent.shiftKey) {
+        return true;
     }
-    //--- On Alt-{up arrow}, insert the <sup> set.
-    else if (zEvent.altKey  &&  zEvent.which == 38) {
-        InsertOurTag (this, "<sup>");
-        return false;
+    if ( ! targetKeyCodes.includes (zEvent.which) ) {
+        return true;
     }
-    //--- On Alt-{down arrow}, insert the <sub> set.
-    else if (zEvent.altKey  &&  zEvent.which == 40) {
-        InsertOurTag (this, "<sub>");
-        return false;
+    for (let btn of scConfig) {
+        if (zEvent.which === btn[6]) {
+            let matchesEvent = true;
+            for (let kbMod of btn[8]) {
+                if ( ! zEvent[kbMod] ) {
+                    matchesEvent = false;
+                    break;
+                }
+            }
+            if (matchesEvent) {
+                let newHTML = btn[4]  ?  btn[1]  :  `<${btn[1]}>`;
+                InsertOurTag (this, newHTML, btn[3], btn[9]);
+                return false;
+            }
+        }
     }
-    //--- On Alt-X, insert the <del> set.
-    else if (zEvent.altKey  &&  zEvent.which == 88) {
-        InsertOurTag (this, "<del>");
-        return false;
-    }
-    //--- On Alt-B, insert a <br>.
-    else if (zEvent.altKey  &&  zEvent.which == 66) {
-        InsertOurTag (this, "<br>", true);
-        return false;
-    }
-
     //--- Ignore all other keys.
     return true;
 }
@@ -113,29 +149,27 @@ function InsertOurTagByClick (zEvent) {
     //--- From the clicked button, find the matching textarea.
     var jThis       = $(this);
     var targArea    = jThis.parents ("div.wmd-button-bar").nextAll ("textarea.wmd-input");
-    var tagTxt      = "";
-    var bSoloTag    = false;
-    if (jThis.hasClass ("wmd-kbd-button") )         tagTxt = "<kbd>";
-    else if (jThis.hasClass ("wmd-sup-button") )    tagTxt = "<sup>";
-    else if (jThis.hasClass ("wmd-sub-button") )    tagTxt = "<sub>";
-    else if (jThis.hasClass ("wmd-del-button") )    tagTxt = "<del>";
-    else if (jThis.hasClass ("wmd-br-button") )  {  tagTxt = "<br>";  bSoloTag = true; }
 
-    if (tagTxt) {
-        InsertOurTag (targArea[0], tagTxt, bSoloTag);
-        targArea.focus ();
-        try {
-            //--- This is a utility function that SE currently provides on its pages.
-            StackExchange.MarkdownEditor.refreshAllPreviews ();
-        }
-        catch (e) {
-            console.warn ("***Userscript error: refreshAllPreviews() is no longer defined!");
+    for (let J in targetCssClasses) {
+        if (jThis.hasClass (targetCssClasses[J] ) ) {
+            let btn     = scConfig[J];
+            let newHTML = btn[4]  ?  btn[1]  :  `<${btn[1]}>`;
+
+            InsertOurTag (targArea[0], newHTML, btn[3], btn[9]);
+            targArea.focus ();
+            try {
+                //--- This is a utility function that SE currently provides on its pages.
+                StackExchange.MarkdownEditor.refreshAllPreviews ();
+            }
+            catch (e) {
+                console.warn ("***Userscript error: refreshAllPreviews() is no longer defined!");
+            }
+            break;
         }
     }
-    else console.warn ("***Userscript error: tag event handler miswired.");
 }
 
-function InsertOurTag (node, tagTxt, bTagHasNoEnd) {
+function InsertOurTag (node, tagTxt, bTagHasNoEnd, bWrapByWord) {
     //--- Wrap selected text or insert at curser.
     var tagLength       = tagTxt.length;
     var endTag          = tagTxt.replace (/</, "</");
@@ -177,10 +211,15 @@ function InsertOurTag (node, tagTxt, bTagHasNoEnd) {
         if (possWrappedTxt  &&
             selectedText    == possWrappedTxt.replace (unwrapRegex, "$1")
         ) {
+            let coreText    = selectedText;
+            if (bWrapByWord) {
+                let strpRE  = new RegExp (`${tagTxt}|${endTag}`, 'g');
+                coreText    = coreText.replace (strpRE, "");
+            }
             iTargetStart   -= tagLength;
             iTargetEnd     += tagLength + 1;
-            newText         = oldText.slice (0, iTargetStart) + selectedText + oldText.slice (iTargetEnd);
-            iTargetEnd      = iTargetStart + selectedText.length;
+            newText         = oldText.slice (0, iTargetStart) + coreText + oldText.slice (iTargetEnd);
+            iTargetEnd      = iTargetStart + coreText.length;
         }
         else {
             /*--- Here we will wrap the selection in our tags, but there is one extra
@@ -191,20 +230,32 @@ function InsertOurTag (node, tagTxt, bTagHasNoEnd) {
                 console.warn ("***Userscript error: unexpected failure of whitespace RE.");
             }
             else {
+                let wrappedText = tagTxt + trimSelctd[2] + endTag;
+                if (bWrapByWord) {
+                    let pieces  = trimSelctd[2].split (/(\W+)/);
+                    if (pieces.length) {
+                        wrappedText = "";
+                        for (let piece of pieces) {
+                            if (piece.length  &&  /\w/.test (piece[0]) )
+                                wrappedText += tagTxt + piece + endTag;
+                            else
+                                wrappedText += piece;
+                        }
+                    }
+                }
                 newText         = trimSelctd[1]     //-- Leading whitespace, if any.
-                                + tagTxt + trimSelctd[2] + endTag
+                                + wrappedText
                                 + trimSelctd[3]     //-- Trailing whitespace, if any.
                                 ;
                 newText         = oldText.slice (0, iTargetStart)
                                 + newText + oldText.slice (iTargetEnd)
                                 ;
                 iTargetStart   += tagLength + trimSelctd[1].length;
-                iTargetEnd     += tagLength - trimSelctd[3].length;
+                iTargetEnd     += wrappedText.length - endTag.length - trimSelctd[2].length - trimSelctd[3].length;
             }
         }
     }
 
-    //console.log (newText);
     node.value          = newText;
     //--- After using spelling corrector, this gets buggered, hence the multiple sets.
     node.textContent    = newText;
@@ -236,6 +287,5 @@ newStyle.textContent = `
         font-size: 120%;
         font-weight: bold;
     }
-}
 `;
 document.head.appendChild (newStyle);
