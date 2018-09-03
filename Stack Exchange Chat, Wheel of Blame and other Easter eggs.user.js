@@ -8,7 +8,8 @@
 // @run-at          document-body
 // @noframes
 // @grant           none
-// @version         1.1
+// @version         1.2
+// @history         1.2 Fix bug when last message was posted by a Stack Exchange bot.
 // @history         1.1 Iframe or double-run problem in MS Edge!?
 // @history         1.0 Initial release
 // @author          Brock Adams
@@ -42,8 +43,12 @@ function launchEEgg (zEvent) {
     var eeType = $("#yourPoison").val ();
     switch (eeType) {
         case "WoB":
+            /*-- Important: Autoplay blocker can kill the sound but
+                try/catch does not catch it here. The User must check the console for messages like:
+                "play method is not allowed by the user agent"
+            */
             var msg = $('.message').last ().addClass ('neworedit');
-            Eggs.WOB.blame (msg.parent().parent().attr('class').match(/user-(\d+)/)[1], msg);
+            Eggs.WOB.blame (msg.parent().parent().attr('class').match(/user-(-?\d+)/)[1], msg);
             break;
         case "Asteroids":
             Eggs.Asteroids ('insert coin');
