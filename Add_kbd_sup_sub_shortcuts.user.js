@@ -17,7 +17,8 @@
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     4.1
+// @version     4.2
+// @history     4.2 Speeded icon add when user elects to answer their own question.
 // @history     4.1 Restored icons after SE layout changes; Added checks for layout changes; Code tweaks.
 // @history     4.0 Refactor à la MVC, in prep for options dialog; Fix double markup on slow page loads; Add multi-word split for <kbd>.
 // @history     3.0 SE changed positioning; Added hover highlites; Added <br>; Added <del>; Clear JSHint warnings.
@@ -55,6 +56,9 @@ $("textarea.wmd-input").each (AddOurButtonsAsNeeded);
 rootNode.on ("focus",   "textarea.wmd-input", AddOurButtonsAsNeeded);
 rootNode.on ("keydown", "textarea.wmd-input", InsertOurTagByKeypress);
 rootNode.on ("click",   ".tmAdded",  InsertOurTagByClick);
+rootNode.on ("click",   "#self-answer-popup > .popup-actions .popup-submit",  () => {
+    $("textarea.wmd-input").each (AddOurButtonsAsNeeded);
+} );
 
 /*--- Pre-build button HTML. It's like:
         <li class="wmd-button tmAdded wmd-kbd-button" title="Keyboard tag &lt;kbd&gt; Alt+K">
@@ -103,9 +107,11 @@ function AddOurButtonsAsNeeded () {
             var bbListTimer = setInterval ( () => {
                 var lpCnt   = jThis.data ("loopSafety") + 1;
                 jThis.data ("loopSafety", lpCnt);
-                if (lpCnt > 100) {  // Never saw higher than 4 while testing.
+                if (lpCnt > 100) {  // 100 ~= 15 seconds
                     clearInterval (bbListTimer);
-                    console.warn (`***Userscript error: Unable to find the wmd-button-row.`);
+                    if (jThis.is(":visible") ) {  //  Avoid triggering on unused self-answer textarea.
+                        console.warn (`***Userscript error: Unable to find the wmd-button-row.`, jThis);
+                    }
                 }
                 var bbList  = btnBar.find (".wmd-button-row");
                 if (bbList.length) {
