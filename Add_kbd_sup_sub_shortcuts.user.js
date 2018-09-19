@@ -9,17 +9,16 @@
 // @match       *://*.stackoverflow.com/*
 // @match       *://*.superuser.com/*
 // @exclude     *://api.stackexchange.com/*
-// @exclude     *://blog.stackexchange.com/*
-// @exclude     *://blog.stackoverflow.com/*
-// @exclude     *://chat.stackexchange.com/*
-// @exclude     *://chat.stackoverflow.com/*
+// @exclude     *://blog.*.com/*
+// @exclude     *://chat.*.com/*
 // @exclude     *://data.stackexchange.com/*
 // @exclude     *://elections.stackexchange.com/*
 // @exclude     *://openid.stackexchange.com/*
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     4.0
+// @version     4.1
+// @history     4.1 Restored icons after SE layout changes; Added checks for layout changes; Code tweaks.
 // @history     4.0 Refactor à la MVC, in prep for options dialog; Fix double markup on slow page loads; Add multi-word split for <kbd>.
 // @history     3.0 SE changed positioning; Added hover highlites; Added <br>; Added <del>; Clear JSHint warnings.
 // @history     2.3 Add mathoverflow.net.
@@ -34,10 +33,8 @@
 // @homepage    http://stackapps.com/q/3341/7653
 // @updateURL   https://github.com/BrockA/SE-misc/raw/master/Add_kbd_sup_sub_shortcuts.user.js
 // ==/UserScript==
-// Lint foo follows, but Tampermonkey is FUBAR at the moment:
-// jshint -W014
-/* eslint-disable no-multi-spaces */
-/* global StackExchange */
+/* global $, StackExchange */
+/* eslint-disable no-multi-spaces, curly */
 
 var rootNode = $("#content");
 var scConfig = [
@@ -99,11 +96,18 @@ function AddOurButtonsAsNeeded () {
     var jThis   = $(this);
     if ( ! jThis.data ("hasKbdBttn") ) {
         //--- Find the button bar and add our buttons after the last, not help, button.
-        var btnBar  = jThis.prevAll ("div.wmd-button-bar");
+        var btnBar  = jThis.closest (".wmd-container").find (".wmd-button-bar");
         if (btnBar.length) {
             //--- The button bar takes a while to AJAX-in.
+            jThis.data ("loopSafety", 0);
             var bbListTimer = setInterval ( () => {
-                var bbList  = btnBar.find ("ul.wmd-button-row");
+                var lpCnt   = jThis.data ("loopSafety") + 1;
+                jThis.data ("loopSafety", lpCnt);
+                if (lpCnt > 100) {  // Never saw higher than 4 while testing.
+                    clearInterval (bbListTimer);
+                    console.warn (`***Userscript error: Unable to find the wmd-button-row.`);
+                }
+                var bbList  = btnBar.find (".wmd-button-row");
                 if (bbList.length) {
                     clearInterval (bbListTimer);
                     if (jThis.data ("hasKbdBttn") )  return;  // Guard against multiple timer overlap on slow pages.
@@ -112,7 +116,10 @@ function AddOurButtonsAsNeeded () {
                     insrtPnt.after (btnsHtml);
                     jThis.data ("hasKbdBttn", true);
                 }
-            }, 100);
+            }, 150);
+        }
+        else {
+            console.warn (`***Userscript error: Unable to find the button bar.`);
         }
     }
 }
@@ -122,33 +129,34 @@ function InsertOurTagByKeypress (zEvent) {
     if ( !zEvent.altKey  &&  !zEvent.ctrlKey  &&  !zEvent.shiftKey) {
         return true;
     }
-    if ( ! targetKeyCodes.includes (zEvent.which) ) {
-        return true;
-    }
-    for (let btn of scConfig) {
-        if (zEvent.which === btn[6]) {
-            let matchesEvent = true;
-            for (let kbMod of btn[8]) {
-                if ( ! zEvent[kbMod] ) {
-                    matchesEvent = false;
-                    break;
-                }
-            }
-            if (matchesEvent) {
-                let newHTML = btn[4]  ?  btn[1]  :  `<${btn[1]}>`;
-                InsertOurTag (this, newHTML, btn[3], btn[9]);
-                return false;
-            }
+    let J = targetKeyCodes.indexOf (zEvent.which);
+    if (J < 0)  return true;
+
+    let btn             = scConfig[J];
+    let matchesEvent    = true;
+    for (let kbMod of btn[8]) {
+        if ( ! zEvent[kbMod] ) {
+            matchesEvent = false;
+            break;
         }
+    }
+    if (matchesEvent) {
+        let newHTML = btn[4]  ?  btn[1]  :  `<${btn[1]}>`;
+        InsertOurTag (this, newHTML, btn[3], btn[9]);
+        return false;
     }
     //--- Ignore all other keys.
     return true;
 }
 
-function InsertOurTagByClick (zEvent) {
+function InsertOurTagByClick () {
     //--- From the clicked button, find the matching textarea.
     var jThis       = $(this);
-    var targArea    = jThis.parents ("div.wmd-button-bar").nextAll ("textarea.wmd-input");
+    var targArea    = jThis.closest (".wmd-button-bar").nextAll (".js-stacks-validation").find ("textarea.wmd-input");
+    if (targArea.length === 0) {
+        console.warn (`***Userscript error: Unable to find the textarea from button.`);
+        return;
+    }
 
     for (let J in targetCssClasses) {
         if (jThis.hasClass (targetCssClasses[J] ) ) {
@@ -162,7 +170,7 @@ function InsertOurTagByClick (zEvent) {
                 StackExchange.MarkdownEditor.refreshAllPreviews ();
             }
             catch (e) {
-                console.warn ("***Userscript error: refreshAllPreviews() is no longer defined!");
+                console.error ("***Userscript error: refreshAllPreviews() is no longer defined!", e);
             }
             break;
         }
@@ -198,14 +206,21 @@ function InsertOurTag (node, tagTxt, bTagHasNoEnd, bWrapByWord) {
 
         /*--- Is the current selection wrapped?  If so, just unwrap it.
             This works the same way as SE's bold, italic, code, etc...
-            "]text["                --> "<kbd>]text[</kbd>"
-            "<kbd>]text[</kbd>"     --> "]text["
-            "]<kbd>text</kbd>["     --> "<kbd>]<kbd>text</kbd>[</kbd>"
+            "]text["                --> "<sup>]text[</sup>"
+            "<sup>]text[</sup>"     --> "]text["
+            "]<sup>text</sup>["     --> "<sup>]<sup>text</sup>[</sup>"
 
             Except that:
-            "]["                    --> "<kbd>][</kbd>"
-            "<kbd>][</kbd>"         --> "]["
+            "]["                    --> "<sup>][</sup>"
+            "<sup>][</sup>"         --> "]["
             with no placeholder text.
+
+            And (Wrap by Word Mode):
+            "]Shift P["                         --> "<kbd>]Shift</kbd> <kbd>P[</kbd>"
+            "<kbd>]Shift</kbd> <kbd>P[</kbd>"   --> "]Shift P["
+
+            And: No wrapping or unwrapping is done on tags with no end tag, nor on non-tag text.
+
             Note that `]` and `[` denote the selected text here.
         */
         if (possWrappedTxt  &&
@@ -233,14 +248,12 @@ function InsertOurTag (node, tagTxt, bTagHasNoEnd, bWrapByWord) {
                 let wrappedText = tagTxt + trimSelctd[2] + endTag;
                 if (bWrapByWord  &&  trimSelctd[2].length) {
                     let pieces  = trimSelctd[2].split (/(\W+)/);
-                    if (pieces.length) {
-                        wrappedText = "";
-                        for (let piece of pieces) {
-                            if (piece.length  &&  /\w/.test (piece[0]) )
-                                wrappedText += tagTxt + piece + endTag;
-                            else
-                                wrappedText += piece;
-                        }
+                    wrappedText = "";
+                    for (let piece of pieces) {
+                        if (piece.length  &&  /\w/.test (piece[0]) )
+                            wrappedText += tagTxt + piece + endTag;
+                        else
+                            wrappedText += piece;
                     }
                 }
                 newText         = trimSelctd[1]     //-- Leading whitespace, if any.
