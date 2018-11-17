@@ -1,5 +1,6 @@
 // ==UserScript==
 // @name        Stack Exchange, replace badge icons with duckies
+// @description Does what it says on the tin.
 // @match       *://*.askubuntu.com/*
 // @match       *://*.mathoverflow.net/*
 // @match       *://*.serverfault.com/*
