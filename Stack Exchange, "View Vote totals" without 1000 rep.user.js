@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Stack Exchange: "View Vote totals" without 1000 rep
+// @name        Stack Exchange: View Up&Down Vote totals, on posts, without 1000 rep
 // @description Enables the up/down vote counts feature without requiring an account or 1k+ reputation.
 // @match       *://*.askubuntu.com/*
 // @match       *://*.onstartups.com/*
