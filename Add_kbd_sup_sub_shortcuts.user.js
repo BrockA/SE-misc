@@ -17,7 +17,8 @@
 // @exclude     *://stackexchange.com/*
 // @exclude     *://*/review
 // @grant       none
-// @version     4.2
+// @version     4.3
+// @history     4.3 Fix to work with throwback page layout of the user's "Edit your profile" page.
 // @history     4.2 Speeded icon add when user elects to answer their own question.
 // @history     4.1 Restored icons after SE layout changes; Added checks for layout changes; Code tweaks.
 // @history     4.0 Refactor à la MVC, in prep for options dialog; Fix double markup on slow page loads; Add multi-word split for <kbd>.
@@ -160,8 +161,12 @@ function InsertOurTagByClick () {
     var jThis       = $(this);
     var targArea    = jThis.closest (".wmd-button-bar").nextAll (".js-stacks-validation").find ("textarea.wmd-input");
     if (targArea.length === 0) {
-        console.warn (`***Userscript error: Unable to find the textarea from button.`);
-        return;
+        //-- The "Edit your profile" page currently uses a different (mostly throwback) layout.
+        targArea    = jThis.closest (".wmd-button-bar").next ("textarea.wmd-input");
+        if (targArea.length === 0) {
+            console.warn (`***Userscript error: Unable to find the textarea from button.`);
+            return;
+        }
     }
 
     for (let J in targetCssClasses) {
