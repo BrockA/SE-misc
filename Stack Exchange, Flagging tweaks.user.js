@@ -24,7 +24,8 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @noframes
-// @version     2.3
+// @version     3.0
+// @history     3.0 Stack Exchange significantly altered layouts.  Flagging status up top (mods only).  Restored/enhanced features for mods.
 // @history     2.3 Adjusted flag icon for new page layout.
 // @history     2.2 Prevent double icon that occurred in certain browsing sequences.
 // @history     2.1 Always make sure you are testing the file you think you are testing!
@@ -38,6 +39,8 @@
 // @author      Brock Adams
 // @homepage    http://stackapps.com/q/7057/7653
 // ==/UserScript==
+/* global $ */
+/* eslint-disable no-multi-spaces, curly */
 
 var userId;
 if (objHas (unsafeWindow, "StackExchange.options.user.userId") ) {
@@ -64,38 +67,39 @@ else {
 */
 var flagSumIconSrc  = "//i.stack.imgur.com/05rE1.png";
 
-/*--- There are 2 cases:
-    1) New style user page, plus meta site user page.
-    2) Old style user page, plus meta site user page.
-
-    Must make sure we are on the user's own profile and he's logged in (can't see flag summary otherwise).
+/*--- On user profile pages, add a "Flag Summary" tab if the user can see flag details..
+    1) Either the user is logged in and looking at his own profile...
+    2) Or, the user is a moderator.
 */
-var editTabNewStyle = $("#mainbar-full #tabs > a[href^='/users/edit/'], #mainbar-full #tabs > a[href^='/users/preferences/']").first ();
-if (editTabNewStyle.length) {
-    //--- We're on an eligible profile page.
-    editTabNewStyle.after ('<a href="/users/flag-summary/' + userId + '">Flag Summary</a>');
-}
-else {
-    var editTabOldStyle = $("#mainbar-full .sub-header-links > a[href^='/users/edit/'], #mainbar-full .sub-header-links > a[href*='/help/privileges']").first ();
-    if (editTabOldStyle.length) {
+if ( /\/users\/\d+/.test (location.pathname) ) {
+    let editTabNewStyle = $("#mainbar-full #tabs > a[href^='/users/edit/'], #mainbar-full #tabs > a[href^='/users/preferences/']").first ();
+    if (editTabNewStyle.length) {
         //--- We're on an eligible profile page.
-        editTabOldStyle.before ('<a href="/users/flag-summary/' + userId + '">flags</a>');
+        let pgUsrMtch   = location.pathname.match (/users\/(\d+)/);
+        if (pgUsrMtch  &&  pgUsrMtch.length > 1) {
+            let viewedUsrId = pgUsrMtch[1];
+            editTabNewStyle.after ('<a href="/users/flag-summary/' + viewedUsrId + '">Flag Summary</a>');
+        }
     }
 }
 
-
-/*--- On flagging summary pages, color code the flag entries.
-    Flag status looks like, in Russian:
-        <div class="cbt mod-flag">
-            <span class="bounty-indicator-tab flagbg bounty-fix">????</span> ?
-            <a href="/users/177669/brock-adams">Brock Adams</a>
-            <span title="2015-11-15 09:09:14Z" class="relativetime">15 ????? ?????</span>
-            &nbsp;
-            <span class="supernovabg mod-flag-indicator">? ????????</span>
-        </div>
-        This is for a spam flag that is still pending.
+/*--- On flagging summary pages...
 */
 if ( /\/users\/flag-summary\/\d+/.test (location.pathname) ) {
+    let changeDsp               = null;
+    let bViewedUsrIsLoggedUsr   = false;
+    let filterTableKeyNode      = $("#flag-summary-filter");
+    if (filterTableKeyNode.length === 0)  console.warn ("Flag summary script can't find `flag-summary-filter` node.");
+
+    //--- If Flagging status is present, move it up top, since it is much more important.
+    let flagStatNode1           = filterTableKeyNode.nextAll (".s-sidebarwidget--header:contains(tatus)");
+    if (flagStatNode1.length) {
+        let flagStatNode2       = flagStatNode1.next ();
+        flagStatNode1.insertBefore (filterTableKeyNode);
+        flagStatNode2.insertBefore (filterTableKeyNode);
+    }
+
+    //--- Color-code each post's flags listing...
     $(".flagged-post").each ( function () {
         //--- Posts can have multiple flags, so may have to stripe each flag separately
         var jThis       = $(this);
@@ -141,160 +145,149 @@ if ( /\/users\/flag-summary\/\d+/.test (location.pathname) ) {
     } );
 
     //--- Create summary table:
-    //--- But only if the flag summary page matches the logged-in user.
-    var pgUsrMtch   = location.pathname.match (/flag-summary\/(\d+)/);
+    var statsArray  = [
+        0,  //-- Total for percent calcs
+        0,  //-- status=1 waiting for review        <-- Stored 0
+        0,  //-- status=2 helpful                   <-- Stored 1
+        0,  //-- status=3 declined                  <-- Stored 2
+        0,  //-- status=4 disputed                  <-- Stored 3
+        0,  //-- status=5 expired, AKA "Aged Away"  <-- Stored 4
+        0,  //-- Grand Total                        <-- Stored 5
+        0,  //-- New Retracted status               <-- Stored 6
+        // percentHelp                              <-- Stored 7
+    ];
+
+    /*--- Loop thru History table entries and tot up stats:
+        <li> <a href="?group=1&amp;status=2" class="grid bb bc-black-1">
+            <div class="grid--cell">helpful</div>
+            <div class="grid--cell ta-right fl1">17</div>
+        </a> </li>
+    */
+    filterTableKeyNode.nextAll ("ul.s-sidebarwidget__items").find ("li > a[href*='status']").each ( function () {
+        var jThis   = $(this);
+        var fType   = parseInt (jThis.attr ("href").replace (/^.+?\bstatus=(\d+).*$/, "$1"), 10);
+        var fCount  = parseInt (jThis.children (".ta-right").text ().replace (/\D/g, ""), 10);
+
+        statsArray[6]  += fCount;   //-- Increment grand total, always.
+
+        switch (fType) {
+            case 1:  //-- Pending
+            case 4:  //-- Disputed
+            case 5:  //-- Expired
+                statsArray[fType]  += fCount;
+                /*-- "Pending" doesn't count for percent calcs.
+                    Likewise, from http://meta.stackexchange.com/a/141400/148310 :
+                        "The flag weight is decreased by declined flags, but not by disputed ones. "
+                    We were *encouraged*, at one point to dispute flags, too.
+                */
+            break;
+            case 6:  //-- Retracted
+                statsArray[7]  += fCount;   //-- Because added late by SE, index is off if we want to preserve old stats.
+            break;
+            case 2:  //-- Helpful
+            case 3:  //-- Declined
+                statsArray[fType]  += fCount;
+                statsArray[0]      += fCount;  //-- Also used for percent calcs
+            break;
+            default:
+                reportImportantError ("Unexpected case while parsing flag history table: ", false, fType);
+            break;
+        }
+    } );
+
+    let percentHelp = Math.round (100.0 * statsArray[2] / (statsArray[0] || 1) );
+
+    //--- Only fetch and updated stored stats if the flag summary page matches the logged-in user.
+    let pgUsrMtch   = location.pathname.match (/flag-summary\/(\d+)/);
     if (pgUsrMtch  &&  pgUsrMtch[1] == userId) {
-        var statsArray  = [
-            0,  //-- Total for percent calcs
-            0,  //-- status=1 waiting for review        <-- Stored 0
-            0,  //-- status=2 helpful                   <-- Stored 1
-            0,  //-- status=3 declined                  <-- Stored 2
-            0,  //-- status=4 disputed                  <-- Stored 3
-            0,  //-- status=5 expired, AKA "Aged Away"  <-- Stored 4
-            0,  //-- Grand Total                        <-- Stored 5
-            0,  //-- New Retracted status               <-- Stored 6
-            // percentHelp                              <-- Stored 7
-        ];
-
-        //--- Loop thru History table entries and tot up stats:
-        $("#flag-stat-info-table > tbody > tr > td.col2 > a[href*='status=']").each ( function () {
-            var jThis   = $(this);
-            var fType   = parseInt (jThis.attr ("href").replace (/^.+?\bstatus=(\d+).*$/, "$1"), 10);
-            var fCount  = parseInt (jThis.parent ().prev ().text ().replace (/\D/g, ""), 10);
-
-            statsArray[6]  += fCount;   //-- Increment grand total, always.
-
-            switch (fType) {
-                case 1:  //-- Pending
-                case 4:  //-- Disputed
-                case 5:  //-- Expired
-                    statsArray[fType]  += fCount;
-                    /*-- "Pending" doesn't count for percent calcs.
-                        Likewise, from http://meta.stackexchange.com/a/141400/148310 :
-                            "The flag weight is decreased by declined flags, but not by disputed ones. "
-                        We were *encouraged*, at one point to dispute flags, too.
-                    */
-                break;
-                case 6:  //-- Retracted
-                    statsArray[7]  += fCount;   //-- Because added late by SE, index is off if we want to preserve old stats.
-                break;
-                case 2:  //-- Helpful
-                case 3:  //-- Declined
-                    statsArray[fType]  += fCount;
-                    statsArray[0]      += fCount;  //-- Also used for percent calcs
-                break;
-                default:
-                    reportImportantError ("Unexpected case while parsing flag history table: ", false, fType);
-                break;
-            }
-        } );
-
-        var percentHelp = Math.round (100.0 * statsArray[2] / (statsArray[0] || 1) );
-
-        var siteNameKey = location.hostname;
+        bViewedUsrIsLoggedUsr   = true;
+        let siteNameKey         = location.hostname;
         /*--- IMPORTANT!
                 We DON't store the first column (Total for percent calcs) using GM_setValue
                 but we do add and store percentHelp to the array.
         */
-        var oldStats    = JSON.parse (GM_getValue (siteNameKey, "[0,0,0,0, 0,0,0,0]") );
+        let oldStats    = JSON.parse (GM_getValue (siteNameKey, "[0,0,0,0, 0,0,0,0]") );
         if (oldStats.length !== 8) {
             //-- Preserve old stats AMAP, while adding new columns at end...
             console.log ("GM: Stat array changed! Compensating...");
             oldStats    = oldStats.slice (0,7).concat (0);
         }
 
-        var newStats    = statsArray.slice (1,8).concat (percentHelp);
+        let newStats    = statsArray.slice (1,8).concat (percentHelp);
         GM_setValue (siteNameKey, JSON.stringify (newStats) );
 
-        var changeDsp   = $.map (newStats, function (newValue, J) {
+        changeDsp       = $.map (newStats, function (newValue, J) {
             var diff    = newValue - oldStats[J];
             var dspStr  = diff < 0  ?  diff  :  (diff > 0  ?  "+" + diff  :  "&nbsp;");
 
             return dspStr;
         } );
+    }
 
-        $("#flag-stat-info-table").before ( `
-            <table id="gmFlagStatTbl">
-                <tr><th title="Pending">P</th>   <th title="Helpful">H</th>   <th title="Declined">Dc</th>
-                    <th title="Disputed">Ds</th> <th title="Expired">Ex</th>  <th title="Retracted">R</th>
+    filterTableKeyNode.parent ().before ( `
+        <table id="gmFlagStatTbl">
+            <tr><th title="Pending">P</th>   <th title="Helpful">H</th>   <th title="Declined">Dc</th>
+                <th title="Disputed">Ds</th> <th title="Expired">Ex</th>  <th title="Retracted">R</th>
 
-                    <th title="Total">T</th> <th title="Percent Helpful">%</th>
-                </tr><tr>
-                    <td title="Click to filter.">` + statsArray[1] + `</td>
-                    <td title="Click to filter.">` + statsArray[2] + `</td>
-                    <td title="Click to filter.">` + statsArray[3] + `</td>
-                    <td title="Click to filter.">` + statsArray[4] + `</td>
-                    <td title="Click to filter.">` + statsArray[5] + `</td>
-                    <td title="Click to filter.">` + statsArray[7] + `</td>  <!-- Newly added status type -->
-                    <td title="Click to filter.">` + statsArray[6] + `</td>
-                    <td title="Click to filter.">` + percentHelp + `</td>
-                </tr><tr>
-                    <td title="Change since last page view">` + changeDsp[0] + `</td>
-                    <td title="Change since last page view">` + changeDsp[1] + `</td>
-                    <td title="Change since last page view">` + changeDsp[2] + `</td>
-                    <td title="Change since last page view">` + changeDsp[3] + `</td>
-                    <td title="Change since last page view">` + changeDsp[4] + `</td>
-                    <td title="Change since last page view">` + changeDsp[6] + `</td>  <!-- Newly added status type -->
-                    <td title="Change since last page view">` + changeDsp[5] + `</td>
-                    <td title="Change since last page view">` + changeDsp[7] + `</td>
-                </tr>
-            </table>
+                <th title="Total">T</th> <th title="Percent Helpful">%</th>
+            </tr><tr>
+                <td title="Click to filter.">` + statsArray[1] + `</td>
+                <td title="Click to filter.">` + statsArray[2] + `</td>
+                <td title="Click to filter.">` + statsArray[3] + `</td>
+                <td title="Click to filter.">` + statsArray[4] + `</td>
+                <td title="Click to filter.">` + statsArray[5] + `</td>
+                <td title="Click to filter.">` + statsArray[7] + `</td>  <!-- Newly added status type -->
+                <td title="Click to RESET filter.">` + statsArray[6] + `</td>
+                <td title="Click to RESET filter.">` + percentHelp + `</td>
+            </tr>
+        </table>
+    ` );
+    if (bViewedUsrIsLoggedUsr) {
+        $("#gmFlagStatTbl").append ( `
+            <tr>
+                <td title="Change since last page view">` + changeDsp[0] + `</td>
+                <td title="Change since last page view">` + changeDsp[1] + `</td>
+                <td title="Change since last page view">` + changeDsp[2] + `</td>
+                <td title="Change since last page view">` + changeDsp[3] + `</td>
+                <td title="Change since last page view">` + changeDsp[4] + `</td>
+                <td title="Change since last page view">` + changeDsp[6] + `</td>  <!-- Newly added status type -->
+                <td title="Change since last page view">` + changeDsp[5] + `</td>
+                <td title="Change since last page view">` + changeDsp[7] + `</td>
+            </tr>
         ` );
+    }
 
-        /*--- Linkify the table cells.  Can get more useful results than page's filters.
-            URL's like:  http://superuser.com/users/flag-summary/41023?status=3
-        */
-        $("#gmFlagStatTbl").on ("click", "td, th", function (zEvent) {
-            var filterURL   = location.pathname;
-            var columnIdx   = zEvent.target.cellIndex;
+    /*--- Linkify the table cells.  Can get more useful results than page's filters.
+        URL's like:  http://superuser.com/users/flag-summary/41023?status=3
+    */
+    $("#gmFlagStatTbl").on ("click", "td, th", function (zEvent) {
+        var filterURL   = location.pathname;
+        var columnIdx   = zEvent.target.cellIndex;
 
-            switch (columnIdx) {
-                case 0:
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                    filterURL  += '?status=' + (columnIdx + 1);
-                break;
-                case 6:
-                case 7:
-                    //-- No change needed to filterURL, cause going to show all results.
-                break;
-                default:
-                    reportImportantError ("Unexpected case in summary table, click handler: ", false, columnIdx);
-                break;
-            }
-            location.assign (filterURL);
-        } );
-    }  //  Flag summary page matches the logged-in user
+        switch (columnIdx) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                filterURL  += '?status=' + (columnIdx + 1);
+            break;
+            case 6:
+            case 7:
+                //-- No change needed to filterURL, cause going to show all results.
+            break;
+            default:
+                reportImportantError ("Unexpected case in summary table, click handler: ", false, columnIdx);
+            break;
+        }
+        location.assign (filterURL);
+    } );
 }
 else {
     //--- Not on flagging summary page.
-
     //--- Add quicklink for flag summary in topbar
     if (userId) {
-        //-- Old topbar style
-        if (document.getElementById("gmFlagSumIco") == null) {
-            $(".topbar-links").prepend ( `
-                <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
-                    <div class="gravatar-wrapper-24">
-                        <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
-                    </div>
-                </a>
-            ` );
-        }
-        /*-- <strike>New</strike> topbar style
-        if (document.getElementById("gmFlagSumIco") == null) {
-            $(".my-profile").before ( `
-                <a class="profile-me" href="/users/flag-summary/` + userId + `" title="Flag Summary page">
-                    <div class="grayBG gravatar-wrapper-24">
-                        <img id="gmFlagSumIco" class="avatar-me js-avatar-me" src="` + flagSumIconSrc + `">
-                    </div>
-                </a>
-            ` );
-        }
-        */
         //-- New topbar style as of about April 19, 2018
         if (document.getElementById("gmFlagSumIco") == null) {
             $(".my-profile").parent ().before ( `
@@ -457,3 +450,6 @@ GM_addStyle ( `
         background:             gray;
     }
 ` );
+/****************************************************************************
+*****   End of File                                                     *****
+****************************************************************************/
