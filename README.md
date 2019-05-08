@@ -10,6 +10,6 @@ But you can get many of them with [this search at Stack Apps](http://stackapps.c
  - [Dynamically expand the Q and A inputs](https://stackapps.com/a/7719/7653)
  - [Flagging tweaks](https://stackapps.com/q/7057/7653)
  - [Replace Badge Icons with Duckies](https://stackapps.com/a/8116/7653)
+ - [Restore missing and/or obsolete close reasons](https://stackapps.com/q/8327/7653)
  - [View Comment Source Markdown](https://stackapps.com/a/8296/7653)
  - [View Vote Totals](https://stackapps.com/a/8166/7653)
- - [Restore missing and/or obsolete close reasons](https://stackapps.com/q/8327/7653)
