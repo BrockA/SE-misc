@@ -35,7 +35,7 @@
 */
 const possblCloseReasons = [                                                     //-- Note that dscrptn text does not control what's stored/used by SE.
     {id:   1,  defInptVal: "Duplicate",     st: 0,  name: "exact duplicate",             dscrptn: ``}, //-- Complete superceded by reason 101.
-    {id:   2,  defInptVal: "OffTopic",      st: 1,  name: "off topic",                   dscrptn: `Generic, blatantly, off topic.`},
+    {id:   2,  defInptVal: "OffTopic1",     st: 1,  name: "off topic, generic",          dscrptn: `Generic, blatantly, off topic.`},
     {id:   3,  defInptVal: "",              st: 1,  name: "not constructive",            dscrptn: `As it currently stands, this question is not a good fit for our Q&A
                                                                                                   format. We expect answers to be supported by facts, references, or
                                                                                                   specific expertise, but this question will likely solicit debate,
