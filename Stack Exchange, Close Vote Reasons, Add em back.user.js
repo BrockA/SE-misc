@@ -17,7 +17,8 @@
 // @exclude     *://stackexchange.com/*
 // @noframes
 // @grant       none
-// @version     1.0
+// @version     1.1
+// @history     1.1 Activated the generic, no extra message used, "Off Topic" reason.
 // @history     1.0 Initial write, in response to chat conversation.
 // @author      Brock Adams
 // @homepage    https://stackapps.com/q/8327/7653
@@ -33,8 +34,8 @@
     3   = Teams sites only
 */
 const possblCloseReasons = [                                                     //-- Note that dscrptn text does not control what's stored/used by SE.
-    {id:   1,  defInptVal: "Duplicate",     st: 1,  name: "exact duplicate",             dscrptn: ``},
-    {id:   2,  defInptVal: "OffTopic",      st: 0,  name: "off topic",                   dscrptn: `DON'T USE?`},
+    {id:   1,  defInptVal: "Duplicate",     st: 0,  name: "exact duplicate",             dscrptn: ``}, //-- Complete superceded by reason 101.
+    {id:   2,  defInptVal: "OffTopic",      st: 1,  name: "off topic",                   dscrptn: `Generic, blatantly, off topic.`},
     {id:   3,  defInptVal: "",              st: 1,  name: "not constructive",            dscrptn: `As it currently stands, this question is not a good fit for our Q&A
                                                                                                   format. We expect answers to be supported by facts, references, or
                                                                                                   specific expertise, but this question will likely solicit debate,
