@@ -12,13 +12,15 @@
 // @require     https://gist.github.com/raw/2625891/waitForKeyElements.js
 // @require     https://crypto.stanford.edu/sjcl/sjcl.js
 // @noframes
+// @inject-into content
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_deleteValue
 // @grant       GM_registerMenuCommand
-// @version     2.0
-// @history     2.0 Update and (re)release to public
-// @history     1.5 Switch to Stack Exchange login
+// @version     2.1
+// @history     2.1 Fix "TypeError: n.replace is not a function" glitch in Violentmonkey.
+// @history     2.0 Update and (re)release to public.
+// @history     1.5 Switch to Stack Exchange login.
 // @history     1.0 Initial write.
 // @author      Brock Adams
 // @homepage    https://stackapps.com/q/8366/7653
